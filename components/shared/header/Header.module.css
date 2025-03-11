@@ -1,0 +1,17 @@
+.header {
+    width: 100vw;
+    padding: 0 10px;
+    height: 50px;
+
+    display: flex;
+    align-items: center;
+}
+
+.title {
+    color: var(--green-color);
+    font-family: "Ubuntu", sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+
+    cursor: default;
+}

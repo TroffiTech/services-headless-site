@@ -1,0 +1,18 @@
+.button {
+    width: fit-content;
+    padding: 12px 20px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: var(--green-color);
+    font-family: inherit;
+    font-size: 20px;
+    color: var(--foreground-color);
+
+    transition: all 0.12s ease;
+}
+
+.button:active {
+    scale: 0.98;
+}
