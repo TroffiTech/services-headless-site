@@ -1,5 +1,8 @@
 .tabs {
+    width: 100%;
     height: calc(100% - 50px);
+
+    padding: 0 20px;
 }
 
 /* TABS LIST */
@@ -51,6 +54,7 @@
 /* TABS DISPLAY */
 
 .tabs_tabsDisplay {
+    width: 100%;
     padding: 0 4px;
     display: flex;
     flex-direction: column;
@@ -103,6 +107,12 @@
 }
 
 @media (min-width: 1024px) {
+    .tabs {
+        width: 1024px;
+        align-self: center;
+        justify-self: center;
+    }
+
     .tabs_tabsList {
         width: 1024px;
         align-self: center;

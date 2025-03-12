@@ -7,8 +7,8 @@ export default async function SuccsessPage(query: {
     const { store, sku, price } = await query.searchParams;
 
     return (
-        <main>
-            <section className='__onecolumn'>
+        <main className='__fullscreen __centerall'>
+            <section className='section-succsess'>
                 <Header />
                 <h1>🥳Успешно!</h1>
                 <p style={{ fontSize: "20px", alignSelf: "start" }}>{`Адрес магазина: ${store}`}</p>
