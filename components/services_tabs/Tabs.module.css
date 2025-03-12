@@ -68,6 +68,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+
+    max-width: 468px;
 }
 
 .tabs_tabsDisplay_inputGroup label {
@@ -98,4 +100,18 @@
 
 .tabs_tabsDisplay_buttonWrapper h2 {
     margin-bottom: 30px;
+}
+
+@media (min-width: 1024px) {
+    .tabs_tabsList {
+        width: 1024px;
+        align-self: center;
+        justify-self: center;
+    }
+
+    .tabs_tabsDisplay {
+        width: 1024px;
+        align-self: center;
+        justify-self: center;
+    }
 }

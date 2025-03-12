@@ -90,6 +90,7 @@ function FirstTab() {
             price: priceRef.current.value,
             domen: `https://${value}`,
         };
+        setIsLoading(true);
         const response = await fetch("api/services/update-one", {
             method: "post",
             headers: {
@@ -97,7 +98,6 @@ function FirstTab() {
             },
             body: JSON.stringify(requestData),
         });
-        setIsLoading(true);
 
         const resultData = (await response.json())[0];
         if (response.status === 200)
