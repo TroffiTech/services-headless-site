@@ -1,134 +1,106 @@
-type PromiseFulfilledResult = {
-    status: "fulfilled";
-    value: Array<{ id: string | undefined }>;
-};
+import {
+	FETCH_RETRY_ATTEMPTS,
+	PRODUCTS_PER_PAGE,
+	REQUEST_DELAY,
+} from "./config";
 
-type PriceList = {
-    [key: string]: string;
-};
+function delay(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-type AuthorizationData = { consumerKey: string; consumerSecret: string };
-type StoreData = { storeURL: string; authorizationData: AuthorizationData };
+async function getProductIds(
+	storeUrl: string,
+	apiCredentials: { key: string; secret: string },
+	skus: string[],
+	retryAttempts: number = FETCH_RETRY_ATTEMPTS
+) {
+	try {
+		const data = await fetch(
+			`${storeUrl}/wp-json/wc/v3/products/?sku=${skus[0]}&per_page=${PRODUCTS_PER_PAGE}&_fields=id,sku`,
+			{
+				headers: {
+					authorization: `Basic ${btoa(
+						apiCredentials.key + ":" + apiCredentials.secret
+					)}`,
+					"content-type": "application/json",
+				},
+				signal: AbortSignal.timeout(120_000),
+			}
+		);
 
-type ProductIdGetterRequestData = {
-    storeURL: string;
-    authorizationData: AuthorizationData;
-    prductSku: string;
-};
+		return await data.json();
+	} catch (error) {
+		if (retryAttempts <= 1) throw new Error("unawailable connection");
+		delay(REQUEST_DELAY);
+		console.log("retry to connect to " + storeUrl);
+		return await getProductIds(
+			storeUrl,
+			apiCredentials,
+			skus,
+			retryAttempts - 1
+		);
+	}
+}
 
-type ProductPriceUpdaterRequest = {
-    sku?: string;
-    id: string | undefined;
-    authorizationData: AuthorizationData;
-    storeURL: string;
-    newPrice: string;
-};
+async function makeBatchUpdateRequest(
+	storeUrl: string,
+	apiCredentials: { key: string; secret: string },
+	idPricePairs: Array<{ regular_price: string; id: number }>
+) {
+	try {
+		const data = await fetch(`${storeUrl}/wp-json/wc/v3/products/batch`, {
+			method: "post",
+			headers: {
+				authorization: `Basic ${btoa(
+					apiCredentials.key + ":" + apiCredentials.secret
+				)}`,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify({ update: idPricePairs }),
+			signal: AbortSignal.timeout(120_000),
+		});
 
-export class WoocommerceAPI {
-    private _productsIdsPromises: Array<Promise<ReturnType<typeof this.fetchProductIdBySku>>> = [];
+		return await data.json();
+	} catch (error) {
+		throw new Error("something went wrong while updating price");
+	}
+}
 
-    private priceList: PriceList = {};
-    private storesAuthData: Array<StoreData> = [];
+export default async function updateStore(
+	storeUrl: string,
+	apiCredentials: { key: string; secret: string },
+	data: { [key: string]: number }
+) {
+	const skus = [];
+	for (const sku in data) {
+		skus.push(sku);
+	}
 
-    private productIdGettersRequests: Array<ProductIdGetterRequestData> = [];
-    private productsPricesUpdaterRequests: Array<ProductPriceUpdaterRequest> = [];
+	const idSkuPairs: Array<{ id: number; sku: string }> | null =
+		await getProductIds(
+			storeUrl,
+			{ key: apiCredentials.key, secret: apiCredentials.secret },
+			skus
+		);
+	if (!idSkuPairs || !Array.isArray(idSkuPairs) || idSkuPairs.length === 0)
+		return { error: true, sucsess: false };
 
-    public updatingResult: Array<{ newPrice: string; storeURL: string; sku: string }> = [];
+	const idPricePairs: Array<{ regular_price: string; id: number }> = [];
+	idSkuPairs.map((pair) => {
+		if (!pair.id || !data[pair.sku]) return;
+		idPricePairs.push({
+			id: pair.id,
+			regular_price: data[pair.sku]?.toString(),
+		});
+	});
 
-    constructor(storesAuthData: Array<StoreData>, priceList: PriceList) {
-        this.storesAuthData = [...storesAuthData];
-        this.priceList = { ...priceList };
-    }
+	const result = await makeBatchUpdateRequest(
+		storeUrl,
+		{ key: apiCredentials.key, secret: apiCredentials.secret },
+		idPricePairs
+	);
 
-    private async fetchProductIdBySku(requestData: ProductIdGetterRequestData) {
-        try {
-            const { storeURL, prductSku, authorizationData } = requestData;
-            const data = await fetch(`${storeURL}/wp-json/wc/v3/products/?sku=${prductSku}`, {
-                headers: {
-                    authorization: `Basic ${btoa(
-                        authorizationData.consumerKey + ":" + authorizationData.consumerSecret
-                    )}`,
-                    "content-type": "application/json",
-                },
-            });
-            return await data.json();
-        } catch {
-            console.warn(`something went wrong while fetch ${requestData.storeURL}`);
-        }
-    }
-
-    private async putProductPriceByID(
-        storeURL: string,
-        authorizationData: AuthorizationData,
-        id: string,
-        newPrice: string
-    ) {
-        try {
-            const data = await fetch(`${storeURL}/wp-json/wc/v3/products/${id}`, {
-                method: "put",
-                headers: {
-                    authorization: `Basic ${btoa(
-                        authorizationData.consumerKey + ":" + authorizationData.consumerSecret
-                    )}`,
-                    "content-type": "application/json",
-                },
-                body: JSON.stringify({ regular_price: newPrice }),
-            });
-            return data.ok;
-        } catch {
-            console.warn(`something went wrong while updating ${storeURL} with ID: ${id}`);
-        }
-    }
-
-    private _setIdsGettersRequests() {
-        this.storesAuthData.map((authData) => {
-            for (const sku in this.priceList) {
-                this.productIdGettersRequests.push({
-                    authorizationData: authData.authorizationData,
-                    storeURL: authData.storeURL,
-                    prductSku: sku,
-                });
-            }
-        });
-    }
-
-    public async fetchProductsIds() {
-        this._setIdsGettersRequests();
-        this.productIdGettersRequests.map((requestData) => {
-            this._productsIdsPromises.push(this.fetchProductIdBySku(requestData));
-        });
-
-        const promisesResults: Array<PromiseFulfilledResult | PromiseRejectedResult> =
-            await Promise.allSettled(this._productsIdsPromises);
-
-        promisesResults.map((result, index) => {
-            if (result.status === "rejected") return;
-            const id = result && result.value?.length ? result.value[0].id : undefined;
-            const productPriceUpdaterRequestData = {
-                id,
-                sku: this.productIdGettersRequests[index].prductSku,
-                newPrice: this.priceList[this.productIdGettersRequests[index].prductSku],
-                storeURL: this.productIdGettersRequests[index].storeURL,
-                authorizationData: this.productIdGettersRequests[index].authorizationData,
-            };
-            this.productsPricesUpdaterRequests.push(productPriceUpdaterRequestData);
-        });
-    }
-
-    public async updateProductsPrices() {
-        for (const priceUpdaterRequest of this.productsPricesUpdaterRequests) {
-            const { authorizationData, id, storeURL, newPrice, sku } = priceUpdaterRequest;
-            if (!id || !newPrice) continue;
-            const isOk = await this.putProductPriceByID(storeURL, authorizationData, id, newPrice);
-            if (isOk) this.updatingResult.push({ newPrice, storeURL, sku: sku || "undefined" });
-        }
-    }
-
-    get getIntermediateResult() {
-        return this.productsPricesUpdaterRequests;
-    }
-
-    get getFinalResult() {
-        return this.updatingResult;
-    }
+	if (!result) return { error: true, sucsess: false };
+	if (result.length === 0) return { error: true, sucsess: false };
+	return { error: false, sucsess: true };
 }
