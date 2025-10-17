@@ -1,12 +1,5 @@
-import {
-	FETCH_RETRY_ATTEMPTS,
-	PRODUCTS_PER_PAGE,
-	REQUEST_DELAY,
-} from "./config";
-
-function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { FETCH_RETRY_ATTEMPTS, PRODUCTS_PER_PAGE, REQUEST_DELAY } from "../config";
+import delay from "../utils/delay";
 
 async function getProductIds(
 	storeUrl: string,
@@ -19,9 +12,7 @@ async function getProductIds(
 			`${storeUrl}/wp-json/wc/v3/products/?sku=${skus[0]}&per_page=${PRODUCTS_PER_PAGE}&_fields=id,sku`,
 			{
 				headers: {
-					authorization: `Basic ${btoa(
-						apiCredentials.key + ":" + apiCredentials.secret
-					)}`,
+					authorization: `Basic ${btoa(apiCredentials.key + ":" + apiCredentials.secret)}`,
 					"content-type": "application/json",
 				},
 				signal: AbortSignal.timeout(120_000),
@@ -33,12 +24,7 @@ async function getProductIds(
 		if (retryAttempts <= 1) throw new Error("unawailable connection");
 		delay(REQUEST_DELAY);
 		console.log("retry to connect to " + storeUrl);
-		return await getProductIds(
-			storeUrl,
-			apiCredentials,
-			skus,
-			retryAttempts - 1
-		);
+		return await getProductIds(storeUrl, apiCredentials, skus, retryAttempts - 1);
 	}
 }
 
@@ -51,9 +37,7 @@ async function makeBatchUpdateRequest(
 		const data = await fetch(`${storeUrl}/wp-json/wc/v3/products/batch`, {
 			method: "post",
 			headers: {
-				authorization: `Basic ${btoa(
-					apiCredentials.key + ":" + apiCredentials.secret
-				)}`,
+				authorization: `Basic ${btoa(apiCredentials.key + ":" + apiCredentials.secret)}`,
 				"content-type": "application/json",
 			},
 			body: JSON.stringify({ update: idPricePairs }),
@@ -66,7 +50,7 @@ async function makeBatchUpdateRequest(
 	}
 }
 
-export default async function updateStore(
+export async function updateStore(
 	storeUrl: string,
 	apiCredentials: { key: string; secret: string },
 	data: { [key: string]: number }
@@ -76,12 +60,11 @@ export default async function updateStore(
 		skus.push(sku);
 	}
 
-	const idSkuPairs: Array<{ id: number; sku: string }> | null =
-		await getProductIds(
-			storeUrl,
-			{ key: apiCredentials.key, secret: apiCredentials.secret },
-			skus
-		);
+	const idSkuPairs: Array<{ id: number; sku: string }> | null = await getProductIds(
+		storeUrl,
+		{ key: apiCredentials.key, secret: apiCredentials.secret },
+		skus
+	);
 	if (!idSkuPairs || !Array.isArray(idSkuPairs) || idSkuPairs.length === 0)
 		return { error: true, sucsess: false };
 
