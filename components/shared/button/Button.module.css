@@ -1,18 +1,41 @@
 .button {
-    width: fit-content;
-    padding: 12px 20px;
+	min-width: 150px;
+	width: fit-content;
+	height: 50px;
+	padding: 12px 20px;
 
-    border: none;
-    border-radius: 12px;
+	border: none;
+	border-radius: 12px;
 
-    background: var(--green-color);
-    font-family: inherit;
-    font-size: 20px;
-    color: var(--foreground-color);
+	background: var(--green-color);
+	font-family: inherit;
+	font-size: 20px;
+	color: var(--foreground-color);
 
-    transition: all 0.12s ease;
+	transition: all 0.12s ease;
+
+	cursor: pointer;
+}
+
+.buttonDisabled {
+	min-width: 150px;
+	width: fit-content;
+	height: 50px;
+	padding: 12px 20px;
+
+	border: none;
+	border-radius: 12px;
+
+	background: var(--gray-color);
+	font-family: inherit;
+	font-size: 20px;
+	color: var(--foreground-color);
+
+	transition: all 0.12s ease;
+
+	cursor: pointer;
 }
 
 .button:active {
-    scale: 0.98;
+	scale: 0.98;
 }

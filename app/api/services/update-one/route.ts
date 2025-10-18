@@ -1,4 +1,4 @@
-import updateStore from "@/server_utils/wooCommerceAPI";
+import { updateStore } from "@/server_utils/woocommerceAPI/updatePrices";
 
 export async function POST(request: Request) {
 	const dataToUpdate = await request.json();
@@ -24,24 +24,17 @@ export async function POST(request: Request) {
 	};
 
 	try {
-		const result = await updateStore(
-			wcAuthData.storeURL,
-			wcAuthData.authorizationData,
-			{
-				[sku]: price,
-			}
-		);
+		const result = await updateStore(wcAuthData.storeURL, wcAuthData.authorizationData, {
+			[sku]: price,
+		});
 
 		if (result.sucsess) {
-			return new Response(
-				JSON.stringify({ newPrice: price, sku, storeURL: wcAuthData.storeURL }),
-				{
-					headers: {
-						"content-type": "application/json",
-					},
-					status: 200,
-				}
-			);
+			return new Response(JSON.stringify({ newPrice: price, sku, storeURL: wcAuthData.storeURL }), {
+				headers: {
+					"content-type": "application/json",
+				},
+				status: 200,
+			});
 		} else {
 			return new Response("something went wrong...", {
 				headers: {

@@ -1,5 +1,6 @@
-import Header from "@/components/shared/header/Header";
 import Link from "next/link";
+
+import Header from "@/components/shared/header/Header";
 
 export default async function SuccsessPage(query: {
 	searchParams: Promise<{ store: string; sku: string; price: string }>;
@@ -11,12 +12,8 @@ export default async function SuccsessPage(query: {
 			<section className="section-succsess">
 				<Header />
 				<h1>🥳Успешно!</h1>
-				<p
-					style={{ fontSize: "20px", alignSelf: "start" }}
-				>{`Адрес магазина: ${store}`}</p>
-				<p
-					style={{ fontSize: "20px", alignSelf: "start" }}
-				>{`Арикул товара: ${sku}`}</p>
+				<p style={{ fontSize: "20px", alignSelf: "start" }}>{`Адрес магазина: ${store}`}</p>
+				<p style={{ fontSize: "20px", alignSelf: "start" }}>{`Арикул товара: ${sku}`}</p>
 				<p
 					style={{
 						fontSize: "20px",
