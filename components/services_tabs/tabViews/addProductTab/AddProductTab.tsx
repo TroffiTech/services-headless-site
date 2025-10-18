@@ -1,10 +1,11 @@
-import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
-import styles from "./AddProductTab.module.css";
+import { useRouter } from "next/navigation";
+
 import StoreDomenSelector from "../../elements/store_domen_selector/StoreDomenSelector";
+import Sonner from "@/components/shared/sonner/Sonner";
 import Button from "@/components/shared/button/Button";
 import Popup from "@/components/shared/popup/Popup";
-import Sonner from "@/components/shared/sonner/Sonner";
+import styles from "./AddProductTab.module.css";
 
 interface Category {
 	id: number;
@@ -36,10 +37,6 @@ export default function AddProductTab() {
 	const priceRef = useRef<HTMLInputElement | null>(null);
 	const mainImageRef = useRef<HTMLInputElement | null>(null);
 	const galleryImagesRef = useRef<HTMLInputElement | null>(null);
-
-	// Refs для выбора категорий и производителей
-	const categoryRef = useRef<HTMLInputElement | null>(null);
-	const manufacturerRef = useRef<HTMLInputElement | null>(null);
 
 	// Загрузка данных при выборе домена
 	useEffect(() => {
@@ -140,37 +137,53 @@ export default function AddProductTab() {
 
 		// Добавляем файлы изображений
 		if (mainImageFile) {
+			console.log("📸 Главное изображение выбрано:", mainImageFile.name);
 			formData.append("main_image", mainImageFile);
 		}
 
 		if (galleryImageFiles) {
+			console.log("🖼️ Изображений галереи:", galleryImageFiles.length);
 			for (let i = 0; i < galleryImageFiles.length; i++) {
 				formData.append("gallery_images", galleryImageFiles[i]);
 			}
 		}
 
 		setIsLoading(true);
+		console.log("🚀 Начинаем создание товара...");
 
 		try {
 			const response = await fetch("/api/services/add-new-product", {
 				method: "POST",
-				body: formData, // FormData вместо JSON
+				body: formData,
 			});
 
 			const result = await response.json();
 
 			if (response.ok && result.success) {
-				console.log("✅ Товар создан успешно:", result.product);
+				console.log("✅ Товар создан успешно!");
+				console.log("📦 Данные товара:", {
+					id: result.product?.id,
+					sku: result.sku,
+					name: result.name,
+					images: result.uploadedImages,
+				});
+
 				navigator.push(
 					`/services/succsess/?store=${result.storeURL}&sku=${result.sku}&name=${result.name}`
 				);
 			} else {
-				console.error("❌ Ошибка создания товара:", result.error);
-				navigator.push("/services/error");
+				const originalError = result.error || "Unknown error";
+				console.log("❌ Ошибка создания товара:", originalError);
+
+				// Кодируем для URL
+				const errorMessage = encodeURIComponent(originalError);
+				const sku = encodeURIComponent(skuRef.current?.value || "");
+
+				navigator.push(`/services/error?error=${errorMessage}&sku=${sku}`);
 			}
 		} catch (error) {
 			console.error("❌ Ошибка сети:", error);
-			navigator.push("/services/error");
+			navigator.push(`/services/error?`);
 		} finally {
 			setIsLoading(false);
 		}
@@ -221,7 +234,6 @@ export default function AddProductTab() {
 						categories.map((category) => (
 							<label key={category.id} className={styles.radioLabel}>
 								<input
-									ref={categoryRef}
 									type="radio"
 									name="category"
 									value={category.id}
@@ -246,7 +258,6 @@ export default function AddProductTab() {
 						manufacturers.map((manufacturer) => (
 							<label key={manufacturer.id} className={styles.radioLabel}>
 								<input
-									ref={manufacturerRef}
 									type="radio"
 									name="manufacturer"
 									value={manufacturer.name}
@@ -326,7 +337,9 @@ export default function AddProductTab() {
 				<p>Кнопка сработает сразу</p>
 				<h3>БУДЬТЕ ВНИМАТЕЛЬНЫ!</h3>
 				<h2>🚭</h2>
-				<Button callback={submit}>Создать товар</Button>
+				<Button callback={submit} disabled={isLoading}>
+					{isLoading ? "Создание..." : "Создать товар"}
+				</Button>
 			</div>
 
 			{isWarning && <Popup>Заполните обязательные поля корректно</Popup>}

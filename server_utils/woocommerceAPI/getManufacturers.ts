@@ -1,9 +1,4 @@
-import { FETCH_RETRY_ATTEMPTS, REQUEST_DELAY } from "../config";
 import getAttributes from "./getAttributes";
-
-function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export interface Manufacturer {
 	id: number;
@@ -68,7 +63,7 @@ export default async function getManufacturers(
 		const terms = await response.json();
 		console.log("✅ Получено производителей:", terms.length);
 
-		return terms.map((term: any) => ({
+		return terms.map((term: Manufacturer) => ({
 			id: term.id,
 			name: term.name,
 			slug: term.slug,

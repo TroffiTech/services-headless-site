@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import getAttributes from "@/server_utils/woocommerceAPI/getAttributes";
 
 export async function POST(request: NextRequest) {

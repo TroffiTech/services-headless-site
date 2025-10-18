@@ -1,10 +1,10 @@
-import Sonner from "@/components/shared/sonner/Sonner";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+
 import StoreDomenSelector from "../../elements/store_domen_selector/StoreDomenSelector";
+import Sonner from "@/components/shared/sonner/Sonner";
 import Button from "@/components/shared/button/Button";
 import Popup from "@/components/shared/popup/Popup";
-
 import styles from "./changePriceTab.module.css";
 
 export default function ChangePriceNab() {

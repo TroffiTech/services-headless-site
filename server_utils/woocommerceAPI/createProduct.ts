@@ -16,16 +16,57 @@ interface ProductData {
 	manufacturer?: string;
 }
 
+// Интерфейс для атрибута товара
+interface ProductAttribute {
+	id: number;
+	name: string;
+	position: number;
+	visible: boolean;
+	variation: boolean;
+	options: string[];
+}
+
+// Интерфейс для данных, отправляемых в WooCommerce
+interface WooCommerceProduct {
+	sku: string;
+	name: string;
+	regular_price: string;
+	status: string;
+	short_description?: string;
+	description?: string;
+	images?: Array<{
+		id: number;
+		position: number;
+	}>;
+	categories?: Array<{
+		id: number;
+	}>;
+	meta_data?: Array<{
+		key: string;
+		value: string;
+	}>;
+	attributes?: ProductAttribute[];
+}
+
+// Интерфейс для ответа от WooCommerce
+interface WooCommerceProductResponse {
+	id: number;
+	sku: string;
+	name: string;
+	regular_price: string;
+	status: string;
+}
+
 interface CreateProductResponse {
 	success: boolean;
-	product?: any;
+	product?: WooCommerceProductResponse;
 	error?: string;
 }
 
 async function createProductRequest(
 	storeUrl: string,
 	apiCredentials: { key: string; secret: string },
-	productData: any,
+	productData: WooCommerceProduct, // Используем правильный интерфейс
 	retryAttempts: number = FETCH_RETRY_ATTEMPTS
 ): Promise<CreateProductResponse> {
 	try {
@@ -44,7 +85,7 @@ async function createProductRequest(
 			throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
 		}
 
-		const data = await response.json();
+		const data: WooCommerceProductResponse = await response.json();
 		return { success: true, product: data };
 	} catch (error) {
 		if (retryAttempts <= 1) {
@@ -68,7 +109,8 @@ export default async function createProduct(
 	try {
 		console.log("🚀 Создание товара с ID изображений...");
 
-		const productData: any = {
+		// Создаем объект для WooCommerce с правильным типом
+		const productData: WooCommerceProduct = {
 			sku: data.sku,
 			name: data.name,
 			regular_price: data.price,
@@ -84,7 +126,7 @@ export default async function createProduct(
 		}
 
 		// Изображения через ID
-		const images = [];
+		const images: Array<{ id: number; position: number }> = [];
 		if (data.main_image_id) {
 			images.push({
 				id: data.main_image_id,
@@ -114,10 +156,14 @@ export default async function createProduct(
 
 		// Производитель
 		if (data.manufacturer) {
-			productData.meta_data = [
+			productData.attributes = [
 				{
-					key: "manufacturer",
-					value: data.manufacturer,
+					id: 128, // ID атрибута "Производитель" из твоих логов
+					name: "Производитель",
+					position: 0,
+					visible: true,
+					variation: false,
+					options: [data.manufacturer],
 				},
 			];
 		}

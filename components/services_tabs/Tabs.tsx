@@ -1,9 +1,10 @@
 "use client";
 
 import { Dispatch, SetStateAction, useState } from "react";
-import styles from "./Tabs.module.css";
+
 import ChangePriceNab from "./tabViews/changePriceTab/changeTabPrice";
 import AddProductTab from "./tabViews/addProductTab/AddProductTab";
+import styles from "./Tabs.module.css";
 
 const servicesList = [
 	{ id: 1, title: "Цены" },

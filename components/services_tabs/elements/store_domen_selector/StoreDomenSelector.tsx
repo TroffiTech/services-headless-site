@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useState } from "react";
-import styles from "./StoreDomenSelector.module.css";
+
 import { checkSVG, crossSVG } from "@/components/icons/icons";
+import styles from "./StoreDomenSelector.module.css";
 import { STORES_DOMENS } from "@/constants";
 
 export default function StoreDomenSelector({
@@ -14,10 +15,7 @@ export default function StoreDomenSelector({
 
 	return (
 		<>
-			<div
-				onClick={() => setIsDropped(true)}
-				className={styles.storeDomenSelector}
-			>
+			<div onClick={() => setIsDropped(true)} className={styles.storeDomenSelector}>
 				👉 {value}
 			</div>
 			<Modal
@@ -56,9 +54,7 @@ function Modal({
 				>
 					{crossSVG}
 				</div>
-				<h2 className={styles.storeDomenSelector_modalContainer_title}>
-					Выберите
-				</h2>
+				<h2 className={styles.storeDomenSelector_modalContainer_title}>Выберите</h2>
 				<ul className={styles.storeDomenSelector_modalContainer_list}>
 					{STORES_DOMENS.map((domen, index) => (
 						<li

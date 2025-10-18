@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import getCategories from "@/server_utils/woocommerceAPI/getCategories";
 
 export async function POST(request: NextRequest) {

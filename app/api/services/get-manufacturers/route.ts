@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import getManufacturers from "@/server_utils/woocommerceAPI/getManufacturers";
 
 export async function POST(request: NextRequest) {

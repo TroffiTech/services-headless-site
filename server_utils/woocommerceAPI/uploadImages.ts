@@ -1,9 +1,3 @@
-import { FETCH_RETRY_ATTEMPTS, REQUEST_DELAY } from "../config";
-
-function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export interface UploadImageResponse {
 	success: boolean;
 	image?: {

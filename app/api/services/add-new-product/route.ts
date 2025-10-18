@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { UploadImageResponse } from "@/server_utils/woocommerceAPI/uploadImages";
 import createProduct from "@/server_utils/woocommerceAPI/createProduct";
 
-async function uploadImageToWordPress(file: File, domen: string, requestUrl: string): Promise<any> {
+async function uploadImageToWordPress(
+	file: File,
+	domen: string,
+	requestUrl: string
+): Promise<UploadImageResponse> {
 	const formData = new FormData();
 	formData.append("file", file);
 	formData.append("domen", domen);
@@ -75,12 +81,11 @@ export async function POST(request: NextRequest) {
 			try {
 				const uploadResult = await uploadImageToWordPress(mainImageFile, domen, requestUrl);
 				if (uploadResult.success) {
-					mainImageId = uploadResult.image.id;
+					mainImageId = uploadResult.image?.id;
 					console.log("✅ Главное изображение загружено, ID:", mainImageId);
 				}
 			} catch (uploadError) {
 				console.error("❌ Ошибка загрузки главного изображения:", uploadError);
-				// Продолжаем создание товара без изображения
 			}
 		}
 
@@ -91,12 +96,11 @@ export async function POST(request: NextRequest) {
 				try {
 					const uploadResult = await uploadImageToWordPress(file, domen, requestUrl);
 					if (uploadResult.success) {
-						galleryImageIds.push(uploadResult.image.id);
-						console.log("✅ Изображение галереи загружено, ID:", uploadResult.image.id);
+						galleryImageIds.push(uploadResult.image!.id);
+						console.log("✅ Изображение галереи загружено, ID:", uploadResult.image!.id);
 					}
 				} catch (uploadError) {
 					console.error("❌ Ошибка загрузки изображения галереи:", uploadError);
-					// Продолжаем без этого изображения
 				}
 			}
 		}

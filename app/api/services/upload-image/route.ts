@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
 
 		// Получаем логин и Application Password из .env
 		const wpUsername = process.env.WP_API_USERNAME;
-		const wpPassword = process.env.WP_API_PASSWORD;
+		const envKey = domen.split("//")[1].split(".")[0];
+		const wpPassword = process.env?.[envKey]?.split("+")[2];
 
 		if (!wpUsername || !wpPassword) {
 			console.error("❌ WordPress credentials not configured");
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
 			try {
 				const errorData = JSON.parse(errorText);
 				errorMessage = errorData.message || errorMessage;
-			} catch (e) {
+			} catch {
 				// Если ответ не JSON, используем текст ошибки
 				errorMessage = errorText || errorMessage;
 			}
