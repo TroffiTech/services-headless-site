@@ -15,23 +15,37 @@ export default function ChangePriceNab() {
 	const skuRef = useRef<HTMLInputElement | null>(null);
 	const priceRef = useRef<HTMLInputElement | null>(null);
 
-	async function submit() {
+	async function submit(action: "price" | "hide") {
 		if (
 			!skuRef.current ||
 			!priceRef.current ||
 			skuRef.current.value === "" ||
-			priceRef.current.value === "" ||
 			value === "Нажмите, чтобы выбрать магазин"
 		) {
 			setIsWarning(true);
 			setTimeout(() => setIsWarning(false), 2000);
 			return;
 		}
-		const requestData = {
-			sku: skuRef.current.value,
-			price: priceRef.current.value,
-			domen: `https://${value}`,
-		};
+
+		let requestData;
+		if (action === "price") {
+			if (priceRef.current.value === "") {
+				setIsWarning(true);
+				setTimeout(() => setIsWarning(false), 2000);
+				return;
+			}
+			requestData = {
+				sku: skuRef.current.value,
+				price: priceRef.current.value,
+				domen: `https://${value}`,
+			};
+		} else {
+			requestData = {
+				sku: skuRef.current.value,
+				domen: `https://${value}`,
+				post_status: "draft",
+			};
+		}
 		setIsLoading(true);
 		const response = await fetch("api/services/update-one", {
 			method: "post",
@@ -44,7 +58,7 @@ export default function ChangePriceNab() {
 		if (response.status === 200) {
 			const resultData = await response.json();
 			navigator.push(
-				`/services/succsess/?store=${resultData.storeURL}&sku=${resultData.sku}&price=${resultData.newPrice}`
+				`/services/succsess/?store=${resultData.storeURL}&sku=${resultData.sku}&price=${resultData.newPrice}`,
 			);
 		} else navigator.push("/services/error");
 	}
@@ -68,7 +82,7 @@ export default function ChangePriceNab() {
 				/>
 			</div>
 			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="price">Новая цена</label>
+				<label htmlFor="price">Новая цена (заполнить только если обновляете цену)</label>
 				<input
 					ref={priceRef}
 					spellCheck={false}
@@ -82,7 +96,8 @@ export default function ChangePriceNab() {
 				<p>Кнопка сработает сразу</p>
 				<h3>БУДЬТЕ ВНИМАТЕЛЬНЫ!</h3>
 				<h2>🚭</h2>
-				<Button callback={submit}>Обновить</Button>
+				<Button callback={() => submit("price")}>Обновить цену</Button>
+				<Button callback={() => submit("hide")}>Скрыть товар</Button>
 			</div>
 			{isWarning && <Popup>Заполните поля корректно</Popup>}
 		</>
