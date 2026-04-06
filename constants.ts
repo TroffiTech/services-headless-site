@@ -33,6 +33,7 @@ export const STORES_DOMENS = [
 	"toyota80.ru",
 	"toyotaland200.ru",
 	"toyotasurf.ru",
+	"troffi.ru",
 	"tundra2.ru",
 	"uazbuh.ru",
 	"uazpatr.ru",
