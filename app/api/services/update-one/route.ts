@@ -1,78 +1,68 @@
 import { updateStore } from "@/server_utils/woocommerceAPI/updatePrices";
+import { apiResponse, apiError } from "@/server_utils/responses";
+import { validateSession } from "@/server_utils/env";
+import { ProductUpdateSchema } from "@/server_utils/validation/services";
+import { getWcAuthData } from "@/server_utils/env";
 
 export async function POST(request: Request) {
-	const dataToUpdate = await request.json();
-	const { sku, price, domen, post_status } = dataToUpdate;
-	console.log(sku, price, domen, post_status);
-
-	const envKey = domen.split("//")[1].split(".")[0];
-	const envValue = process.env?.[envKey]?.split("+");
-
-	if (!envValue)
-		return new Response("wcAuth failed. Please, check wc .env keys", {
-			headers: {
-				"content-type": "application/json",
-			},
-			status: 500,
-		});
-
-	const wcAuthData = {
-		storeURL: domen,
-		authorizationData: {
-			key: envValue[0],
-			secret: envValue[1],
-		},
-	};
-
 	try {
-		let result;
+		// 1. Auth Check
+		const { authenticated } = await validateSession();
+		if (!authenticated) return apiError("Unauthorized", 401);
 
-		if (price && !post_status) {
-			// Обновление цены
-			result = await updateStore(wcAuthData.storeURL, wcAuthData.authorizationData, {
-				[sku]: price,
-			});
-		} else if (!price && post_status) {
-			// Обновление статуса - передаем и статус, и SKU
-			console.log("updating status for sku:", sku);
-			result = await updateStore(wcAuthData.storeURL, wcAuthData.authorizationData, {
-				post_status: post_status, // используем переданный статус
-				sku: sku, // передаем SKU
-			});
+		// 2. Validation
+		const body = await request.json();
+		const validation = ProductUpdateSchema.safeParse(body);
+
+		if (!validation.success) {
+			return apiError(validation.error.issues[0].message, 400);
 		}
 
-		console.log("update result:", result);
+		const { domen, productId: sku, updates } = validation.data;
+		const { price, post_status } = updates;
 
-		if (result && result.success) {
-			return new Response(
-				JSON.stringify({
+		// 3. Get WC Auth Data
+		let wcAuthData;
+		try {
+			wcAuthData = await getWcAuthData(domen);
+		} catch (e: any) {
+			return apiError(e.message, 500);
+		}
+
+		try {
+			let result;
+
+			if (price && !post_status) {
+				// Update price
+				result = await updateStore(wcAuthData.storeURL, wcAuthData.authorizationData, {
+					[sku]: price,
+				});
+			} else if (!price && post_status) {
+				// Update status
+				result = await updateStore(wcAuthData.storeURL, wcAuthData.authorizationData, {
+					post_status: post_status,
+					sku: sku,
+				});
+			} else {
+				return apiError("Provide either price or post_status, but not both", 400);
+			}
+
+			if (result && result.success) {
+				return apiResponse(true, {
 					newPrice: price,
 					sku,
 					storeURL: wcAuthData.storeURL,
 					newStatus: post_status,
-				}),
-				{
-					headers: {
-						"content-type": "application/json",
-					},
-					status: 200,
-				},
-			);
-		} else {
-			return new Response(JSON.stringify({ error: "Update failed" }), {
-				headers: {
-					"content-type": "application/json",
-				},
-				status: 500,
-			});
+				});
+			} else {
+				return apiError("Update failed", 500);
+			}
+		} catch (error) {
+			console.error("Update logic error:", error);
+			return apiError("Internal server error during update", 500);
 		}
-	} catch (error) {
+	} catch (error: any) {
 		console.error("API error:", error);
-		return new Response(JSON.stringify({ error: "Internal server error" }), {
-			headers: {
-				"content-type": "application/json",
-			},
-			status: 500,
-		});
+		return apiError(error.message || "Internal server error", 500);
 	}
 }

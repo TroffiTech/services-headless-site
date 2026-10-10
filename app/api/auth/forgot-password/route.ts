@@ -1,26 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { findUserByEmail, saveUsers, getUsers } from "@/server_utils/auth/db";
 import bcrypt from "bcryptjs";
 import { sendWelcomePasswordEmail } from "@/server_utils/mail";
+import { getClientIp, checkRateLimit } from "@/server_utils/security/rate-limiter";
+import { apiResponse, apiError } from "@/server_utils/responses";
+import { ForgotPasswordSchema } from "@/server_utils/validation/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
-
-    if (!email || !email.endsWith("@troffi.ru")) {
-      return NextResponse.json(
-        { error: "A valid @troffi.ru email is required" },
-        { status: 400 }
-      );
+    // Rate Limiting
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip)) {
+      return apiError("Too many requests. Please try again in 15 minutes.", 429);
     }
+
+    const body = await request.json();
+
+    // Zod Validation
+    const validation = ForgotPasswordSchema.safeParse(body);
+    if (!validation.success) {
+      return apiError(validation.error.issues[0].message, 400);
+    }
+    const { email } = validation.data;
 
     const user = await findUserByEmail(email);
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found. Please register first." },
-        { status: 404 }
-      );
+      return apiError("User not found. Please register first.", 404);
     }
 
     // Generate new password
@@ -42,15 +48,11 @@ export async function POST(request: NextRequest) {
     // Send email
     await sendWelcomePasswordEmail(email, newPassword);
 
-    return NextResponse.json({
-      success: true,
+    return apiResponse(true, {
       message: "A new password has been sent to your email.",
     });
   } catch (error: any) {
     console.error("Forgot Password Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiError("Internal server error", 500);
   }
 }

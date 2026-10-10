@@ -1,8 +1,8 @@
 import { Dispatch, SetStateAction, useState } from "react";
 
-import { checkSVG, crossSVG } from "@/components/icons/icons";
-import styles from "./StoreDomenSelector.module.css";
 import { STORES_DOMENS } from "@/constants";
+import { TundraSelectModal } from "@/components/tundra/molecules/TundraSelectModal";
+import { TundraTypography } from "@/components/tundra/atoms/TundraTypography";
 
 export default function StoreDomenSelector({
 	value,
@@ -15,69 +15,40 @@ export default function StoreDomenSelector({
 
 	return (
 		<>
-			<div onClick={() => setIsDropped(true)} className={styles.storeDomenSelector}>
-				👉 {value}
+			<div
+				onClick={() => setIsDropped(true)}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: "8px",
+					padding: "12px 16px",
+					backgroundColor: "var(--surface)",
+					border: "1px solid var(--line)",
+					borderRadius: "8px",
+					cursor: "pointer",
+					transition: "all 0.2s",
+					width: "100%",
+					marginBottom: "20px",
+				}}
+				onMouseOver={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+				onMouseOut={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
+			>
+				<span style={{ color: "var(--accent)", fontWeight: "bold" }}>👉</span>
+				<TundraTypography variant="text" weight="medium" color="ink">
+					{value}
+				</TundraTypography>
 			</div>
-			<Modal
-				isDropped={isDropped}
-				dropSetter={setIsDropped}
+			<TundraSelectModal
+				isOpen={isDropped}
+				onClose={() => setIsDropped(false)}
+				options={STORES_DOMENS}
 				selected={value}
-				selectSetter={valueSetter}
+				onSelect={(val) => {
+					valueSetter(val);
+					setIsDropped(false);
+				}}
+				title="Выберите магазин"
 			/>
 		</>
-	);
-}
-
-function Modal({
-	isDropped,
-	dropSetter,
-	selected,
-	selectSetter,
-}: {
-	isDropped: boolean;
-	dropSetter: Dispatch<SetStateAction<boolean>>;
-	selected: string;
-	selectSetter: Dispatch<SetStateAction<string>>;
-}) {
-	return (
-		<div
-			className={
-				isDropped
-					? styles.storeDomenSelector_modalContainer__showed
-					: styles.storeDomenSelector_modalContainer__hidden
-			}
-		>
-			<div className={styles.toreDomenSelector_modalContainer_inner}>
-				<div
-					onClick={() => dropSetter(false)}
-					className={styles.storeDomenSelector_modalContainer_cross}
-				>
-					{crossSVG}
-				</div>
-				<h2 className={styles.storeDomenSelector_modalContainer_title}>Выберите</h2>
-				<ul className={styles.storeDomenSelector_modalContainer_list}>
-					{STORES_DOMENS.map((domen, index) => (
-						<li
-							key={index}
-							onClick={() => {
-								dropSetter(false);
-								selectSetter(domen);
-							}}
-						>
-							<p>{`${index + 1}. ${domen}`}</p>
-							<div
-								className={
-									selected === domen
-										? styles.storeDomenSelector_modalContainer_list_icon__selected
-										: styles.storeDomenSelector_modalContainer_list_icon__unselected
-								}
-							>
-								{checkSVG}
-							</div>
-						</li>
-					))}
-				</ul>
-			</div>
-		</div>
 	);
 }

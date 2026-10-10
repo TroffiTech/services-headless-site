@@ -1,41 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-
+import { NextRequest } from "next/server";
 import getManufacturers from "@/server_utils/woocommerceAPI/getManufacturers";
+import { apiResponse, apiError } from "@/server_utils/responses";
+import { validateSession } from "@/server_utils/env";
+import { ServiceRequestSchema } from "@/server_utils/validation/services";
+import { getWcAuthData } from "@/server_utils/env";
 
 export async function POST(request: NextRequest) {
 	try {
-		const { domen } = await request.json();
+		// 1. Auth Check
+		const { authenticated } = await validateSession();
+		if (!authenticated) return apiError("Unauthorized", 401);
 
-		if (!domen) {
-			return NextResponse.json({ error: "Domain is required" }, { status: 400 });
+		// 2. Validation
+		const body = await request.json();
+		const validation = ServiceRequestSchema.safeParse(body);
+
+		if (!validation.success) {
+			return apiError(validation.error.issues[0].message, 400);
 		}
 
-		const envKey = domen.split("//")[1].split(".")[0];
-		const envValue = process.env?.[envKey]?.split("+");
+		const { domen } = validation.data;
 
-		if (!envValue) {
-			return NextResponse.json(
-				{ error: "wcAuth failed. Please, check wc .env keys" },
-				{ status: 500 }
-			);
+		// 3. Get WC Auth Data
+		let wcAuthData;
+		try {
+			wcAuthData = await getWcAuthData(domen);
+		} catch (e: any) {
+			return apiError(e.message, 500);
 		}
-
-		const wcAuthData = {
-			storeURL: domen,
-			authorizationData: {
-				key: envValue[0],
-				secret: envValue[1],
-			},
-		};
 
 		const manufacturers = await getManufacturers(wcAuthData.storeURL, wcAuthData.authorizationData);
 
-		return NextResponse.json({
-			success: true,
-			manufacturers,
-		});
+		return apiResponse(true, { manufacturers });
 	} catch (error) {
 		console.error("Error fetching manufacturers:", error);
-		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+		return apiError("Internal server error", 500);
 	}
 }

@@ -4,7 +4,10 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 
-import Header from "@/components/shared/header/Header";
+import { TundraPageShell } from "@/components/tundra/organisms/TundraPageShell";
+import { TundraCard } from "@/components/tundra/molecules/TundraCard";
+import { TundraTypography } from "@/components/tundra/atoms/TundraTypography";
+import { TundraButton } from "@/components/tundra/atoms/TundraButton";
 
 function ErrorContent() {
 	const searchParams = useSearchParams();
@@ -12,80 +15,62 @@ function ErrorContent() {
 	const sku = searchParams.get("sku");
 
 	return (
-		<main>
-			<section className="__onecolumn">
-				<Header />
-				<h1 style={{ fontSize: "200px", color: "var(--gray-color)" }}>500</h1>
-				<p style={{ fontSize: "30px" }}>😵😵😵</p>
+		<div style={{
+			display: "flex",
+			flexDirection: "column",
+			alignItems: "center",
+			justifyContent: "center",
+			minHeight: "60vh",
+			textAlign: "center"
+		}}>
+			<TundraTypography variant="display" size="xl" weight="bold" color="ink-2" style={{ fontSize: "120px", marginBottom: "0" }}>
+				500
+			</TundraTypography>
+			<TundraTypography variant="text" size="lg" style={{ marginBottom: "32px" }}>
+				😵😵😵
+			</TundraTypography>
 
-				<div
-					style={{
-						maxWidth: "600px",
-						margin: "20px auto",
-						padding: "20px",
-						backgroundColor: "var(--light-gray-color)",
-						borderRadius: "8px",
-						textAlign: "center",
-					}}
-				>
-					<p style={{ fontSize: "18px", color: "var(--dark-color)", marginBottom: "10px" }}>
-						{errorMessage || "Что-то сломалось.. Попробуйте позже либо проверьте введенные данные."}
-					</p>
+			<TundraCard style={{ maxWidth: "600px", padding: "32px", textAlign: "center" }}>
+				<TundraTypography variant="text" size="md" weight="medium" style={{ marginBottom: "16px" }}>
+					{errorMessage || "Что-то сломалось.. Попробуйте позже либо проверьте введенные данные."}
+				</TundraTypography>
 
-					{sku && (
-						<p style={{ fontSize: "16px", color: "var(--gray-color)", marginTop: "10px" }}>
-							Артикул: <strong>{sku}</strong>
-						</p>
-					)}
-				</div>
+				{sku && (
+					<TundraTypography variant="text" size="sm" color="soft" style={{ marginBottom: "24px" }}>
+						Артикул: <span style={{ color: "var(--ink)", fontWeight: "bold" }}>{sku}</span>
+					</TundraTypography>
+				)}
 
-				<div style={{ marginTop: "20px" }}>
-					<Link
-						style={{
-							fontSize: "24px",
-							color: "var(--green-color)",
-							textDecoration: "none",
-							marginRight: "20px",
-						}}
-						href={"/services"}
-					>
-						Создать новый товар
-					</Link>
-
-					<button
+				<div style={{ display: "flex", gap: "16px", justifyContent: "center", marginTop: "24px" }}>
+					<TundraButton
+						variant="secondary"
 						onClick={() => window.history.back()}
-						style={{
-							fontSize: "18px",
-							color: "var(--blue-color)",
-							background: "none",
-							border: "none",
-							cursor: "pointer",
-							textDecoration: "underline",
-						}}
 					>
 						Вернуться и исправить
-					</button>
+					</TundraButton>
+					<Link href="/services">
+						<TundraButton variant="primary">
+							Создать новый товар
+						</TundraButton>
+					</Link>
 				</div>
-			</section>
-		</main>
+			</TundraCard>
+		</div>
 	);
 }
 
 export default function ErrorPage() {
 	return (
-		<Suspense
-			fallback={
-				<main>
-					<section className="__onecolumn">
-						<Header />
-						<div style={{ textAlign: "center", padding: "50px" }}>
-							<p>Загрузка...</p>
-						</div>
-					</section>
-				</main>
-			}
-		>
-			<ErrorContent />
-		</Suspense>
+		<TundraPageShell>
+			<Suspense
+				fallback={
+					<div style={{ textAlign: "center", padding: "50px" }}>
+						<TundraTypography variant="text">Загрузка...</TundraTypography>
+					</div>
+				}
+			>
+				<ErrorContent />
+			</Suspense>
+		</TundraPageShell>
 	);
 }

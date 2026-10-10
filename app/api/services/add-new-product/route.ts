@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 import { UploadImageResponse } from "@/server_utils/woocommerceAPI/uploadImages";
 import createProduct from "@/server_utils/woocommerceAPI/createProduct";
+import { apiResponse, apiError } from "@/server_utils/responses";
+import { validateSession } from "@/server_utils/env";
+import { getWcAuthData } from "@/server_utils/env";
+import { DomainSchema } from "@/server_utils/validation/services";
 
 async function uploadImageToWordPress(
 	file: File,
@@ -38,6 +42,10 @@ async function uploadImageToWordPress(
 
 export async function POST(request: NextRequest) {
 	try {
+		// 1. Auth Check
+		const { authenticated } = await validateSession();
+		if (!authenticated) return apiError("Unauthorized", 401);
+
 		const formData = await request.formData();
 		const requestUrl = request.url;
 
@@ -51,25 +59,23 @@ export async function POST(request: NextRequest) {
 		const manufacturer = formData.get("manufacturer") as string;
 		const domen = formData.get("domen") as string;
 
-		// Валидация
+		// 2. Validation
 		if (!sku || !name || !price || !domen) {
-			return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+			return apiError("Missing required fields", 400);
 		}
 
-		const envKey = domen.split("//")[1].split(".")[0];
-		const envValue = process.env?.[envKey]?.split("+");
-
-		if (!envValue) {
-			return NextResponse.json({ error: "wcAuth failed" }, { status: 500 });
+		const domainValidation = DomainSchema.safeParse(domen);
+		if (!domainValidation.success) {
+			return apiError(domainValidation.error.issues[0].message, 400);
 		}
 
-		const wcAuthData = {
-			storeURL: domen,
-			authorizationData: {
-				key: envValue[0],
-				secret: envValue[1],
-			},
-		};
+		// 3. Get WC Auth Data
+		let wcAuthData;
+		try {
+			wcAuthData = await getWcAuthData(domen);
+		} catch (e: any) {
+			return apiError(e.message, 500);
+		}
 
 		// Загрузка изображений через WordPress Media API
 		let mainImageId: number | undefined;
@@ -119,8 +125,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		if (result.success) {
-			return NextResponse.json({
-				success: true,
+			return apiResponse(true, {
 				product: result.product,
 				storeURL: wcAuthData.storeURL,
 				sku,
@@ -131,13 +136,10 @@ export async function POST(request: NextRequest) {
 				},
 			});
 		} else {
-			return NextResponse.json(
-				{ error: result.error || "Failed to create product" },
-				{ status: 500 }
-			);
+			return apiError(result.error || "Failed to create product", 500);
 		}
 	} catch (error) {
 		console.error("Error:", error);
-		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+		return apiError("Internal server error", 500);
 	}
 }

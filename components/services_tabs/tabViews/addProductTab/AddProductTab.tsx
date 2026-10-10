@@ -3,9 +3,11 @@ import { useRouter } from "next/navigation";
 
 import StoreDomenSelector from "../../elements/store_domen_selector/StoreDomenSelector";
 import Sonner from "@/components/shared/sonner/Sonner";
-import Button from "@/components/shared/button/Button";
-import Popup from "@/components/shared/popup/Popup";
-import styles from "./AddProductTab.module.css";
+import { TundraButton } from "@/components/tundra/atoms/TundraButton";
+import { TundraInput } from "@/components/tundra/atoms/TundraInput";
+import { TundraTypography } from "@/components/tundra/atoms/TundraTypography";
+import { TundraFormField } from "@/components/tundra/molecules/TundraFormField";
+import { TundraCard } from "@/components/tundra/molecules/TundraCard";
 
 interface Category {
 	id: number;
@@ -137,19 +139,16 @@ export default function AddProductTab() {
 
 		// Добавляем файлы изображений
 		if (mainImageFile) {
-			console.log("📸 Главное изображение выбрано:", mainImageFile.name);
 			formData.append("main_image", mainImageFile);
 		}
 
 		if (galleryImageFiles) {
-			console.log("🖼️ Изображений галереи:", galleryImageFiles.length);
 			for (let i = 0; i < galleryImageFiles.length; i++) {
 				formData.append("gallery_images", galleryImageFiles[i]);
 			}
 		}
 
 		setIsLoading(true);
-		console.log("🚀 Начинаем создание товара...");
 
 		try {
 			const response = await fetch("/api/services/add-new-product", {
@@ -160,22 +159,11 @@ export default function AddProductTab() {
 			const result = await response.json();
 
 			if (response.ok && result.success) {
-				console.log("✅ Товар создан успешно!");
-				console.log("📦 Данные товара:", {
-					id: result.product?.id,
-					sku: result.sku,
-					name: result.name,
-					images: result.uploadedImages,
-				});
-
 				navigator.push(
 					`/services/succsess/?store=${result.storeURL}&sku=${result.sku}&name=${result.name}`
 				);
 			} else {
 				const originalError = result.error || "Unknown error";
-				console.log("❌ Ошибка создания товара:", originalError);
-
-				// Кодируем для URL
 				const errorMessage = encodeURIComponent(originalError);
 				const sku = encodeURIComponent(skuRef.current?.value || "");
 
@@ -192,157 +180,236 @@ export default function AddProductTab() {
 	return (
 		<>
 			{isLoading && <Sonner />}
-			<div className={styles.tabs_tabsDisplay_description}>
+			<TundraTypography variant="display" size="lg" weight="bold" style={{ marginBottom: "24px" }}>
 				Добавить продукт в выбранный магазин
-			</div>
+			</TundraTypography>
 
 			<StoreDomenSelector value={value} valueSetter={setValue} />
 
 			{value !== "Нажмите, чтобы выбрать магазин" && isLoadingData && (
-				<div className={styles.loadingMessage}>Загрузка данных магазина...</div>
+				<TundraTypography variant="text" size="sm" color="soft" style={{ textAlign: "center", marginBottom: "20px" }}>
+					Загрузка данных магазина...
+				</TundraTypography>
 			)}
 
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="sku">Артикул *</label>
-				<input
-					ref={skuRef}
-					spellCheck={false}
-					type="text"
-					name="sku"
-					placeholder="AB.123.12.1"
-					required
-				/>
-			</div>
+			<TundraCard style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+				<TundraFormField label="Артикул *" required>
+					<TundraInput
+						ref={skuRef}
+						spellCheck={false}
+						type="text"
+						name="sku"
+						placeholder="AB.123.12.1"
+						required
+					/>
+				</TundraFormField>
 
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="name">Название товара *</label>
-				<input
-					ref={nameRef}
-					spellCheck={false}
-					type="text"
-					name="name"
-					placeholder="Смартфон iPhone 15 Pro"
-					required
-				/>
-			</div>
+				<TundraFormField label="Название товара *" required>
+					<TundraInput
+						ref={nameRef}
+						spellCheck={false}
+						type="text"
+						name="name"
+						placeholder="Смартфон iPhone 15 Pro"
+						required
+					/>
+				</TundraFormField>
 
-			{/* Выбор категории */}
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label>Категория</label>
-				<div className={styles.radioGroup}>
-					{categories.length > 0 ? (
-						categories.map((category) => (
-							<label key={category.id} className={styles.radioLabel}>
-								<input
-									type="radio"
-									name="category"
-									value={category.id}
-									className={styles.radioInput}
-								/>
-								<span className={styles.radioText}>{category.name}</span>
-							</label>
-						))
-					) : (
-						<div className={styles.noData}>
-							{isLoadingData ? "Загрузка категорий..." : "Категории не найдены"}
-						</div>
-					)}
+				<TundraFormField label="Категория">
+					<div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "8px 0" }}>
+						{categories.length > 0 ? (
+							categories.map((category) => (
+								<label key={category.id} style={{
+									display: "flex",
+									alignItems: "center",
+									gap: "6px",
+									cursor: "pointer",
+									fontSize: "14px",
+									fontFamily: "var(--font-text)",
+									color: "var(--ink-2)"
+								}}>
+									<input
+										type="radio"
+										name="category"
+										value={category.id}
+										style={{ accentColor: "var(--accent)" }}
+									/>
+									<span>{category.name}</span>
+								</label>
+							))
+						) : (
+							<div style={{ color: "var(--soft)", fontSize: "13px" }}>
+								{isLoadingData ? "Загрузка категорий..." : "Категории не найдены"}
+							</div>
+						)}
+					</div>
+				</TundraFormField>
+
+				<TundraFormField label="Производитель">
+					<div style={{ display: "flex", flexWrap: "wrap", gap: "12px", padding: "8px 0" }}>
+						{manufacturers.length > 0 ? (
+							manufacturers.map((manufacturer) => (
+								<label key={manufacturer.id} style={{
+									display: "flex",
+									alignItems: "center",
+									gap: "6px",
+									cursor: "pointer",
+									fontSize: "14px",
+									fontFamily: "var(--font-text)",
+									color: "var(--ink-2)"
+								}}>
+									<input
+										type="radio"
+										name="manufacturer"
+										value={manufacturer.name}
+										style={{ accentColor: "var(--accent)" }}
+									/>
+									<span>{manufacturer.name}</span>
+								</label>
+							))
+						) : (
+							<div style={{ color: "var(--soft)", fontSize: "13px" }}>
+								{isLoadingData ? "Загрузка производителей..." : "Производители не найдены"}
+							</div>
+						)}
+					</div>
+				</TundraFormField>
+
+				<TundraFormField label="Короткое описание">
+					<textarea
+						ref={shortDescriptionRef}
+						spellCheck={false}
+						name="short_description"
+						placeholder="Краткое описание товара для карточки..."
+						rows={3}
+						style={{
+							width: "100%",
+							padding: "12px 16px",
+							borderRadius: "8px",
+							border: "1px solid var(--line)",
+							boxSizing: "border-box",
+							fontSize: "15px",
+							fontFamily: "var(--font-text)",
+							outline: "none",
+							color: "var(--ink)",
+							transition: "border-color 0.2s",
+						}}
+						onFocus={(e) => e.currentTarget.style.borderColor = "var(--accent)"}
+						onBlur={(e) => e.currentTarget.style.borderColor = "var(--line)"}
+					/>
+				</TundraFormField>
+
+				<TundraFormField label="Описание">
+					<textarea
+						ref={descriptionRef}
+						spellCheck={false}
+						name="description"
+						placeholder="Подробное описание товара со всеми характеристиками..."
+						rows={5}
+						style={{
+							width: "100%",
+							padding: "12px 16px",
+							borderRadius: "8px",
+							border: "1px solid var(--line)",
+							boxSizing: "border-box",
+							fontSize: "15px",
+							fontFamily: "var(--font-text)",
+							outline: "none",
+							color: "var(--ink)",
+							transition: "border-color 0.2s",
+						}}
+						onFocus={(e) => e.currentTarget.style.borderColor = "var(--accent)"}
+						onBlur={(e) => e.currentTarget.style.borderColor = "var(--line)"}
+					/>
+				</TundraFormField>
+
+				<TundraFormField label="Цена *" required>
+					<TundraInput
+						ref={priceRef}
+						spellCheck={false}
+						type="number"
+						step="0.01"
+						min="0"
+						name="price"
+						placeholder="9999.00"
+						required
+					/>
+				</TundraFormField>
+
+				<TundraFormField label="✅ Главное изображение (JPG, PNG, GIF, WebP)" required>
+					<input
+						ref={mainImageRef}
+						type="file"
+						name="main_image"
+						accept="image/jpeg,image/png,image/gif,image/webp"
+						style={{
+							fontSize: "14px",
+							fontFamily: "var(--font-text)",
+							color: "var(--ink-2)",
+							cursor: "pointer"
+						}}
+					/>
+				</TundraFormField>
+
+				<TundraFormField label="Дополнительные изображения (можно несколько)">
+					<input
+						ref={galleryImagesRef}
+						type="file"
+						name="gallery_images"
+						accept="image/jpeg,image/png,image/gif,image/webp"
+						multiple
+						style={{
+							fontSize: "14px",
+							fontFamily: "var(--font-text)",
+							color: "var(--ink-2)",
+							cursor: "pointer"
+						}}
+					/>
+				</TundraFormField>
+
+				<div style={{
+					marginTop: "20px",
+					paddingTop: "20px",
+					borderTop: "1px solid var(--line)",
+					textAlign: "center"
+				}}>
+					<TundraTypography variant="text" size="sm" color="soft" style={{ marginBottom: "12px", display: "block" }}>
+						Будьте внимательны при создании товара
+					</TundraTypography>
+					<TundraButton
+						onClick={submit}
+						isLoading={isLoading}
+						variant="primary"
+						style={{ width: "100%" }}
+					>
+						{isLoading ? "Создание..." : "Создать товар"}
+					</TundraButton>
 				</div>
-			</div>
+			</TundraCard>
 
-			{/* Выбор производителя */}
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label>Производитель</label>
-				<div className={styles.radioGroup}>
-					{manufacturers.length > 0 ? (
-						manufacturers.map((manufacturer) => (
-							<label key={manufacturer.id} className={styles.radioLabel}>
-								<input
-									type="radio"
-									name="manufacturer"
-									value={manufacturer.name}
-									className={styles.radioInput}
-								/>
-								<span className={styles.radioText}>{manufacturer.name}</span>
-							</label>
-						))
-					) : (
-						<div className={styles.noData}>
-							{isLoadingData ? "Загрузка производителей..." : "Производители не найдены"}
-						</div>
-					)}
+			{isWarning && (
+				<div style={{
+					position: "fixed",
+					bottom: "20px",
+					right: "20px",
+					backgroundColor: "var(--err)",
+					color: "white",
+					padding: "12px 24px",
+					borderRadius: "8px",
+					boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
+					zIndex: 1000,
+					fontWeight: "bold",
+					animation: "slideIn 0.3s ease-out"
+				}}>
+					Заполните обязательные поля корректно
 				</div>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="short_description">Короткое описание</label>
-				<textarea
-					ref={shortDescriptionRef}
-					spellCheck={false}
-					name="short_description"
-					placeholder="Краткое описание товара для карточки..."
-					rows={3}
-				/>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="description">Описание</label>
-				<textarea
-					ref={descriptionRef}
-					spellCheck={false}
-					name="description"
-					placeholder="Подробное описание товара со всеми характеристиками..."
-					rows={5}
-				/>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="price">Цена *</label>
-				<input
-					ref={priceRef}
-					spellCheck={false}
-					type="number"
-					step="0.01"
-					min="0"
-					name="price"
-					placeholder="9999.00"
-					required
-				/>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="main_image">✅ Выберите файл изображения (JPG, PNG, GIF, WebP)</label>
-				<input
-					ref={mainImageRef}
-					type="file"
-					name="main_image"
-					accept="image/jpeg,image/png,image/gif,image/webp"
-				/>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_inputGroup}>
-				<label htmlFor="gallery_images">
-					Дополнительные изображения. ✅ Можно выбрать несколько файлов
-				</label>
-				<input
-					ref={galleryImagesRef}
-					type="file"
-					name="gallery_images"
-					accept="image/jpeg,image/png,image/gif,image/webp"
-					multiple
-				/>
-			</div>
-
-			<div className={styles.tabs_tabsDisplay_buttonWrapper}>
-				<p>Кнопка сработает сразу</p>
-				<h3>БУДЬТЕ ВНИМАТЕЛЬНЫ!</h3>
-				<h2>🚭</h2>
-				<Button callback={submit} disabled={isLoading}>
-					{isLoading ? "Создание..." : "Создать товар"}
-				</Button>
-			</div>
-
-			{isWarning && <Popup>Заполните обязательные поля корректно</Popup>}
+			)}
+			<style>{`
+				@keyframes slideIn {
+					from { transform: translateX(100%); opacity: 0; }
+					to { transform: translateX(0); opacity: 1; }
+				}
+			`}</style>
 		</>
 	);
 }

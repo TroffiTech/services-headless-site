@@ -1,0 +1,70 @@
+# Project Documentation: Troffi Services
+
+## 📌 Overview
+Troffi Services is a high-performance internal corporate management dashboard built with **Next.js 16 (App Router)**. It serves as a professional administrative interface for multiple WooCommerce stores, allowing admins to perform critical operations—such as adding products and updating prices—across the entire store network from a single, secure interface.
+
+## 🏗️ Architecture
+
+### Tech Stack
+- **Framework**: Next.js 16 (React 19)
+- **Design System**: Tundra UI Concept v1.1 (Atomic Design)
+- **Styling**: CSS Variables / Global CSS (Tundra Palette)
+- **Typography**: Space Grotesk (Display), Roboto Mono (Text)
+- **API**: Next.js Route Handlers (API Routes)
+- **Validation**: Zod (Strict schema validation for all API endpoints)
+- **Integration**: WooCommerce REST API (WP-JSON)
+- **Deployment**: Self-hosted VPS optimized (Vercel dependencies removed)
+
+### Core Directory Structure
+- `/app`: Routing and API endpoints.
+    - `/api/auth`: Secure authentication logic (NextAuth.js).
+    - `/api/services`: Logic for WooCommerce operations (e.g., `add-new-product`, `update-one`).
+    - `/services`: Main dashboard with batch processing capabilities.
+- `/components`: Tundra Atomic UI Library.
+    - `/tundra/atoms`: Basic units (`TundraButton`, `TundraInput`, `TundraTypography`, `TundraBadge`).
+    - `/tundra/molecules`: Grouped atoms (`TundraCard`, `TundraFormField`, `TundraSelectModal`).
+    - `/tundra/organisms`: Complex sections (`TundraHeader`, `TundraPageShell`, `TundraTabNavigation`, `TundraStoreSidebar`).
+    - `/services_tabs`: Tool-specific views and their shared `StoreContext`.
+- `/server_utils`: Core backend utilities.
+    - `/auth`: Session guards and user persistence.
+    - `/security`: IP-based rate limiting.
+    - `/validation`: Zod schemas for request validation.
+    - `/i18n`: Centralized Russian UI phrases library.
+    - `env.ts`: Safe environment variable mapping and domain logic.
+
+### Authentication & Multi-tenancy
+The application implements a secure, domain-restricted authentication system:
+1. **Access Control**: Only emails with `@troffi.ru` domains can register/login.
+2. **Session Management**: Handled via NextAuth.js with hashed passwords (bcryptjs).
+3. **WooCommerce Auth**: Dynamic credential lookup based on the selected store domain, retrieving secure keys from environment variables.
+
+## 🔄 Key Workflows
+
+### Batch Product Creation Flow
+`TundraStoreSidebar (Multi-select)` $\rightarrow$ `AddProductTab (Form)` $\rightarrow$ `Client-side Loop` $\rightarrow$ `API (/api/services/add-new-product)` $\rightarrow$ `WooCommerce API`
+
+### Batch Price Update Flow
+`TundraStoreSidebar (Multi-select)` $\rightarrow$ `ChangePriceTab (Form)` $\rightarrow$ `Client-side Loop` $\rightarrow$ `API (/api/services/update-one)` $\rightarrow$ `WooCommerce API`
+
+## 🛠️ Major Improvements Implemented
+- **Professional UI**: Complete migration to Tundra UI Design System (Atomic approach).
+- **Batch Operations**: Transitioned from single-store selection to a global multi-store sidebar, enabling updates across the entire network simultaneously.
+- **Security Hardening**:
+    - Added strict Zod validation to all API routes.
+    - Implemented IP-based rate limiting for authentication endpoints.
+    - Moved to a formal registration/password-recovery flow.
+- **Technical Quality**:
+    - Centralized Russian localization.
+    - Replaced fragile domain-parsing logic with safe environment mapping.
+    - Removed Vercel-specific dependencies for VPS self-hosting.
+
+## ⚠️ Known Weak Points & Technical Debt
+- **Attribute IDs**: The "Manufacturer" attribute ID is still hardcoded (`128`) in some logic.
+- **Batch Feedback**: Current batch success/error pages are generic; a detailed per-store report is needed.
+- **Product Discovery**: Updating prices currently requires manual SKU entry; a searchable product list is needed.
+
+## 🚀 Future Roadmap
+1. **Product Search**: Implement a searchable product catalog to replace manual SKU entry.
+2. **Detailed Batch Reporting**: Create a results page that lists success/failure for every targeted store in a batch operation.
+3. **Advanced Product Editing**: Add capability to edit product descriptions and images for existing items.
+4. **Audit Logging**: Implement a system to track who changed which product/price and when.

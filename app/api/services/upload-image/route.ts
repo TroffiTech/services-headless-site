@@ -1,39 +1,49 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { apiResponse, apiError } from "@/server_utils/responses";
+import { validateSession } from "@/server_utils/env";
+import { DomainSchema } from "@/server_utils/validation/services";
 
 export async function POST(request: NextRequest) {
 	try {
+		// 1. Auth Check
+		const { authenticated } = await validateSession();
+		if (!authenticated) return apiError("Unauthorized", 401);
+
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
 		const domen = formData.get("domen") as string;
 
+		// 2. Validation
 		if (!file || !domen) {
-			return NextResponse.json({ error: "File and domain are required" }, { status: 400 });
+			return apiError("File and domain are required", 400);
+		}
+
+		const domainValidation = DomainSchema.safeParse(domen);
+		if (!domainValidation.success) {
+			return apiError(domainValidation.error.issues[0].message, 400);
 		}
 
 		if (!file.type.startsWith("image/")) {
-			return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+			return apiError("File must be an image", 400);
 		}
 
 		// Проверяем размер файла (макс. 10MB)
 		const MAX_FILE_SIZE = 10 * 1024 * 1024;
 		if (file.size > MAX_FILE_SIZE) {
-			return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
+			return apiError("File size must be less than 10MB", 400);
 		}
 
 		// Получаем логин и Application Password из .env
 		const wpUsername = process.env.WP_API_USERNAME;
-		const envKey = domen.split("//")[1].split(".")[0];
+		const envKey = domen.split("//")[1].split(".")[0].toUpperCase();
 		const wpPassword = process.env?.[envKey]?.split("+")[2];
 
 		if (!wpUsername || !wpPassword) {
 			console.error("❌ WordPress credentials not configured");
-			return NextResponse.json({ error: "WordPress credentials not configured" }, { status: 500 });
+			return apiError("WordPress credentials not configured", 500);
 		}
 
 		console.log("🖼️ Загрузка изображения через WordPress Media API...");
-		console.log("👤 Пользователь:", wpUsername);
-		console.log("🏪 Домен:", domen);
-		console.log("📁 Файл:", file.name, `(${Math.round(file.size / 1024)}KB)`);
 
 		// Создаем FormData для WordPress
 		const wpFormData = new FormData();
@@ -46,7 +56,6 @@ export async function POST(request: NextRequest) {
 			method: "POST",
 			headers: {
 				Authorization: `Basic ${Buffer.from(`${wpUsername}:${wpPassword}`).toString("base64")}`,
-				// Не добавляем Content-Type - браузер сам установит с boundary для FormData
 			},
 			body: wpFormData,
 		});
@@ -54,14 +63,12 @@ export async function POST(request: NextRequest) {
 		if (!response.ok) {
 			const errorText = await response.text();
 			console.error("❌ Ошибка загрузки. Статус:", response.status);
-			console.error("❌ Ответ сервера:", errorText);
 
 			let errorMessage = `Upload failed: ${response.status}`;
 			try {
 				const errorData = JSON.parse(errorText);
 				errorMessage = errorData.message || errorMessage;
 			} catch {
-				// Если ответ не JSON, используем текст ошибки
 				errorMessage = errorText || errorMessage;
 			}
 
@@ -70,13 +77,7 @@ export async function POST(request: NextRequest) {
 
 		const mediaData = await response.json();
 
-		console.log("✅ Изображение загружено успешно!");
-		console.log("🆔 ID:", mediaData.id);
-		console.log("🔗 URL:", mediaData.source_url);
-		console.log("📛 Название:", mediaData.title?.rendered);
-
-		return NextResponse.json({
-			success: true,
+		return apiResponse(true, {
 			image: {
 				id: mediaData.id,
 				src: mediaData.source_url,
@@ -84,14 +85,8 @@ export async function POST(request: NextRequest) {
 				title: mediaData.title?.rendered || file.name,
 			},
 		});
-	} catch (error) {
+	} catch (error: any) {
 		console.error("❌ Ошибка загрузки изображения:", error);
-		return NextResponse.json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : "Upload failed",
-			},
-			{ status: 500 }
-		);
+		return apiError(error.message || "Upload failed", 500);
 	}
 }
