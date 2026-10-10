@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 
-export function apiResponse(success: boolean, data?: any, error?: string) {
-  return NextResponse.json(
-    {
-      success,
-      ...(data !== undefined && { data }),
-      ...(error !== undefined && { error }),
-    },
-    {
-      status: success ? 200 : (error === "Unauthorized" ? 401 : 400),
-    }
-  );
+/**
+ * Standard API response wrapper to ensure consistency across the application.
+ */
+export function apiResponse(success: boolean, data?: any, status: number = 200) {
+	return NextResponse.json(
+		{
+			success,
+			...(data !== undefined && { data }),
+		},
+		{ status }
+	);
 }
 
+/**
+ * Standard API error response wrapper.
+ */
 export function apiError(message: string, status: number = 400) {
-  return NextResponse.json(
-    { success: false, error: message },
-    { status }
-  );
+	return NextResponse.json(
+		{
+			success: false,
+			error: message
+		},
+		{ status }
+	);
 }
