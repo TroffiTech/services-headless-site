@@ -43,17 +43,23 @@ export default function ChangePriceNab() {
 					let requestData;
 					if (action === "price") {
 						requestData = {
-							sku: skuRef.current!.value,
-							price: priceRef.current!.value,
 							domen: `https://${store}`,
+							productId: skuRef.current!.value,
+							updates: {
+								price: priceRef.current!.value,
+							},
 						};
 					} else {
 						requestData = {
-							sku: skuRef.current!.value,
 							domen: `https://${store}`,
-							post_status: "draft",
+							productId: skuRef.current!.value,
+							updates: {
+								post_status: "draft",
+							},
 						};
 					}
+
+					console.log("[Frontend] Sending request data to backend:", requestData);
 
 					const response = await fetch("/api/services/update-one", {
 						method: "post",
@@ -64,24 +70,35 @@ export default function ChangePriceNab() {
 					});
 
 					if (!response.ok) {
-						throw new Error(`Store ${store} failed: ${response.statusText}`);
+						const errorText = await response.text();
+						console.error(`[Frontend Error] Store ${store} failed: ${response.status}`, errorText);
+						throw new Error(store);
 					}
 
-					return response.json();
+					const json = await response.json();
+					console.log(`[Frontend Response] Store ${store} success:`, json);
+					return { store, status: json.data?.status || "updated" };
 				})
 			);
 
-			const successful = results.filter(r => r.status === 'fulfilled').length;
+			const successList = results
+				.filter((r): r is PromiseFulfilledResult<{store: string, status: string}> => r.status === 'fulfilled' && r.value.status === 'updated')
+				.map(r => r.value.store)
+				.join(",");
 
-			if (successful === 0) {
-				navigator.push("/services/error");
-			} else if (successful < selectedStores.length) {
-				navigator.push(`/services/error?error=Partial update: ${successful}/${selectedStores.length} stores succeeded`);
-			} else {
-				navigator.push(
-					`/services/succsess/?store=Multiple&sku=${skuRef.current?.value}&price=${priceRef.current?.value}`
-				);
-			}
+			const notFoundList = results
+				.filter((r): r is PromiseFulfilledResult<{store: string, status: string}> => r.status === 'fulfilled' && r.value.status === 'not_found')
+				.map(r => r.value.store)
+				.join(",");
+
+			const failedList = results
+				.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+				.map(r => r.reason instanceof Error ? r.reason.message : "unknown")
+				.join(",");
+
+			navigator.push(
+				`/services/results?sku=${skuRef.current?.value}&price=${priceRef.current?.value}&success=${successList}&notFound=${notFoundList}&failed=${failedList}`
+			);
 		} catch (error) {
 			console.error("Batch update error:", error);
 			navigator.push("/services/error");

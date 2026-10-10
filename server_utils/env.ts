@@ -14,8 +14,8 @@ export function getEnvKeyFromDomain(domen: string): string | null {
     const parts = hostname.split(".");
     if (parts.length < 1) return null;
 
-    // Get the first segment and uppercase it (e.g., 'store' -> 'STORE')
-    return parts[0].toUpperCase();
+    // Get the first segment in lowercase (e.g., 'store')
+    return parts[0].toLowerCase();
   } catch {
     return null;
   }
@@ -30,7 +30,15 @@ export async function getWcAuthData(domen: string) {
     throw new Error("Invalid domain format");
   }
 
+  console.log(`[Env Debug] Looking for environment variable: ${envKey}`);
   const envValue = process.env?.[envKey]?.split("+");
+
+  if (envValue) {
+    console.log(`[Env Debug] Found value for ${envKey}: ${envValue[0]} + ${envValue[1] || 'MISSING_SECRET'}`);
+  } else {
+    console.log(`[Env Debug] Value for ${envKey} is undefined or null`);
+  }
+
   if (!envValue || envValue.length < 2) {
     throw new Error(`wcAuth failed. Please check environment variable: ${envKey}`);
   }

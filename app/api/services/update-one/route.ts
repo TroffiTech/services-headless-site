@@ -48,21 +48,28 @@ export async function POST(request: Request) {
 			}
 
 			if (result && result.success) {
+				if (result.message === "Product not found in store") {
+					return apiResponse(true, {
+						status: "not_found",
+						sku,
+						storeURL: wcAuthData.storeURL,
+					}, 200);
+				}
 				return apiResponse(true, {
+					status: "updated",
 					newPrice: price,
 					sku,
 					storeURL: wcAuthData.storeURL,
 					newStatus: post_status,
 				});
 			} else {
-				return apiError("Update failed", 500);
+				const errorMsg = result?.message || "Update failed";
+				return apiError(errorMsg, 500);
 			}
 		} catch (error) {
-			console.error("Update logic error:", error);
 			return apiError("Internal server error during update", 500);
 		}
 	} catch (error: any) {
-		console.error("API error:", error);
 		return apiError(error.message || "Internal server error", 500);
 	}
 }

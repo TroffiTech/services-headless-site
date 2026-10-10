@@ -1,14 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { use } from "react";
 
 import { TundraPageShell } from "@/components/tundra/organisms/TundraPageShell";
 import { TundraCard } from "@/components/tundra/molecules/TundraCard";
 import { TundraTypography } from "@/components/tundra/atoms/TundraTypography";
 import { TundraButton } from "@/components/tundra/atoms/TundraButton";
 
-export default async function SuccsessPage(query: {
-	searchParams: Promise<{ store: string; sku: string; price: string }>;
+export default function SuccsessPage({
+	searchParams,
+}: {
+	searchParams: Promise<{ stores: string; sku: string; price: string }>;
 }) {
-	const { store, sku, price } = await query.searchParams;
+	const { stores, sku, price } = use(searchParams);
+	const storeList = stores ? stores.split(",") : [];
 
 	return (
 		<TundraPageShell>
@@ -26,9 +32,15 @@ export default async function SuccsessPage(query: {
 
 				<TundraCard style={{ maxWidth: "600px", padding: "32px", width: "100%" }}>
 					<div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
-						<div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
-							<TundraTypography variant="text" color="soft">Адрес магазина</TundraTypography>
-							<TundraTypography variant="text" weight="medium">{store}</TundraTypography>
+						<div style={{ display: "flex", flexDirection: "column", gap: "8px", borderBottom: "1px solid var(--line)", paddingBottom: "12px", marginBottom: "8px" }}>
+							<TundraTypography variant="text" color="soft" style={{ textAlign: "left" }}>Обновленные магазины</TundraTypography>
+							<div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "flex-start" }}>
+								{storeList.map((s, i) => (
+									<TundraTypography key={i} variant="text" size="sm" weight="medium" style={{ backgroundColor: "var(--page)", padding: "2px 8px", borderRadius: "4px", border: "1px solid var(--line)" }}>
+										{s}
+									</TundraTypography>
+								))}
+							</div>
 						</div>
 						<div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
 							<TundraTypography variant="text" color="soft">Артикул товара</TundraTypography>

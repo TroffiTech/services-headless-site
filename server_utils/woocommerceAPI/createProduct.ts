@@ -1,8 +1,5 @@
-import { FETCH_RETRY_ATTEMPTS, REQUEST_DELAY } from "../config";
-
-function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { getStore } from "./storeManager";
+import { ProductType } from "./localClient";
 
 interface ProductData {
 	sku: string;
@@ -16,39 +13,6 @@ interface ProductData {
 	manufacturer?: string;
 }
 
-// Интерфейс для атрибута товара
-interface ProductAttribute {
-	id: number;
-	name: string;
-	position: number;
-	visible: boolean;
-	variation: boolean;
-	options: string[];
-}
-
-// Интерфейс для данных, отправляемых в WooCommerce
-interface WooCommerceProduct {
-	sku: string;
-	name: string;
-	regular_price: string;
-	status: string;
-	short_description?: string;
-	description?: string;
-	images?: Array<{
-		id: number;
-		position: number;
-	}>;
-	categories?: Array<{
-		id: number;
-	}>;
-	meta_data?: Array<{
-		key: string;
-		value: string;
-	}>;
-	attributes?: ProductAttribute[];
-}
-
-// Интерфейс для ответа от WooCommerce
 interface WooCommerceProductResponse {
 	id: number;
 	sku: string;
@@ -63,122 +27,98 @@ interface CreateProductResponse {
 	error?: string;
 }
 
-async function createProductRequest(
-	storeUrl: string,
-	apiCredentials: { key: string; secret: string },
-	productData: WooCommerceProduct, // Используем правильный интерфейс
-	retryAttempts: number = FETCH_RETRY_ATTEMPTS
-): Promise<CreateProductResponse> {
-	try {
-		const response = await fetch(`${storeUrl}/wp-json/wc/v3/products`, {
-			method: "POST",
-			headers: {
-				authorization: `Basic ${btoa(apiCredentials.key + ":" + apiCredentials.secret)}`,
-				"content-type": "application/json",
-			},
-			body: JSON.stringify(productData),
-			signal: AbortSignal.timeout(120_000),
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-		}
-
-		const data: WooCommerceProductResponse = await response.json();
-		return { success: true, product: data };
-	} catch (error) {
-		if (retryAttempts <= 1) {
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : "Connection failed",
-			};
-		}
-
-		await delay(REQUEST_DELAY);
-		console.log(`Retry creating product (${retryAttempts - 1} attempts left)`);
-		return createProductRequest(storeUrl, apiCredentials, productData, retryAttempts - 1);
-	}
-}
-
 export default async function createProduct(
 	storeUrl: string,
-	apiCredentials: { key: string; secret: string },
+	_apiCredentials: { key: string; secret: string },
 	data: ProductData
 ): Promise<CreateProductResponse> {
 	try {
-		console.log("🚀 Создание товара с ID изображений...");
+		console.log("🚀 Создание товара через WooClient...");
 
-		// Создаем объект для WooCommerce с правильным типом
-		const productData: WooCommerceProduct = {
+		// Initialize store
+		const store = await getStore(storeUrl);
+
+		// Map ProductData to ProductType
+		const productPayload: ProductType = {
 			sku: data.sku,
 			name: data.name,
-			regular_price: data.price,
-			status: "publish",
+			price: parseFloat(data.price),
+			status: "publish", // Default status
+			shortDescription: data.short_description,
+			description: data.description,
 		};
 
-		// Текстовые поля
-		if (data.short_description) {
-			productData.short_description = data.short_description;
-		}
-		if (data.description) {
-			productData.description = data.description;
-		}
-
-		// Изображения через ID
-		const images: Array<{ id: number; position: number }> = [];
-		if (data.main_image_id) {
-			images.push({
-				id: data.main_image_id,
-				position: 0,
-			});
-			console.log("📸 Добавлено главное изображение ID:", data.main_image_id);
-		}
-
-		if (data.gallery_image_ids && data.gallery_image_ids.length > 0) {
-			data.gallery_image_ids.forEach((imageId, index) => {
-				images.push({
-					id: imageId,
-					position: index + 1,
-				});
-			});
-			console.log("🖼️ Добавлены изображения галереи:", data.gallery_image_ids.length);
-		}
-
-		if (images.length > 0) {
-			productData.images = images;
-		}
-
-		// Категории
+		// Categories
 		if (data.categories && data.categories.length > 0) {
-			productData.categories = data.categories.map((id) => ({ id }));
+			productPayload.categories = data.categories.map((id) => ({ id }));
 		}
 
-		// Производитель
+		// Manufacturer Attribute
 		if (data.manufacturer) {
-			productData.attributes = [
+			productPayload.attributes = [
 				{
-					id: 128, // ID атрибута "Производитель" из твоих логов
-					name: "Производитель",
-					position: 0,
-					visible: true,
-					variation: false,
+					id: 128, // ID атрибута "Производитель"
 					options: [data.manufacturer],
 				},
 			];
 		}
 
+		// Handle Images.
+		// Note: The library's createProducts expects image paths for upload.
+		// However, since the app already uploads images and has IDs, we cannot
+		// use the library's automatic upload for existing IDs.
+		// We will create the product first, then update images via fetch
+		// if the library doesn't support ID-based creation in the high-level API.
+		// Actually, to keep logic identical, we'll use the library for creation
+		// and then handle images if necessary, but for now we'll map what we can.
+
 		console.log("📦 Отправка данных товара в WooCommerce...");
-		const result = await createProductRequest(storeUrl, apiCredentials, productData);
+		const results = await store.createProducts([productPayload]);
 
-		if (result.success) {
+		// The library returns an array of results for createProducts
+		const result = results[0];
+
+		if (result && !result.error) {
 			console.log("✅ Товар создан успешно!");
-			console.log("🆔 ID товара:", result.product?.id);
-		} else {
-			console.error("❌ Ошибка создания товара:", result.error);
-		}
+			console.log("🆔 ID товара:", result.id);
 
-		return result;
+			// Manual image update since library expects paths
+			if (data.main_image_id || (data.gallery_image_ids && data.gallery_image_ids.length > 0)) {
+				const images = [];
+				if (data.main_image_id) {
+					images.push({ id: data.main_image_id, position: 0 });
+				}
+				if (data.gallery_image_ids) {
+					data.gallery_image_ids.forEach((id, index) => {
+						images.push({ id, position: index + 1 });
+					});
+				}
+
+				// Use updateProducts to set the image IDs
+				await store.updateProducts([{
+					id: result.id,
+					images: images as any, // casting because library type expects paths
+				}]);
+			}
+
+			return {
+				success: true,
+				product: {
+					id: result.id,
+					sku: result.sku,
+					name: result.name,
+					regular_price: result.price.toString(),
+					status: "publish",
+				},
+			};
+		} else {
+			const errorMsg = result?.error || "Failed to create product";
+			console.error("❌ Ошибка создания товара:", errorMsg);
+			return {
+				success: false,
+				error: errorMsg,
+			};
+		}
 	} catch (error) {
 		console.error("💥 Критическая ошибка:", error);
 		return {
